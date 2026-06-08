@@ -24,7 +24,7 @@ function App() {
         if (params.get('auth_success') === 'true') {
             const loggedUser = {
                 id: parseInt(params.get('id'), 10),
-                discordId: params.get('id'), // ID пользователя
+                discordId: params.get('discordId') || params.get('id'), // ID пользователя
                 username: params.get('username'),
                 avatar: params.get('avatar'),
                 minecraftNickname: params.get('minecraftNickname') !== 'null' ? params.get('minecraftNickname') : null,
@@ -162,7 +162,7 @@ function App() {
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/seasons" element={<Seasons />} />
                     <Route path="/rules" element={<Rules />} />
-                    <Route path="/store" element={<Store />} />
+                    <Route path="/store" element={<Store user={user} />} />
                     <Route path="/commands" element={<Commands />} />
                     <Route path="/profile" element={<Profile user={user} setUser={setUser} onLogout={handleLogout} />} />
                 </Routes>
