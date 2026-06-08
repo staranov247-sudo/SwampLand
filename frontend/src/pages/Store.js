@@ -111,83 +111,93 @@ const Store = () => {
         {
             id: 13,
             category: 'Префикс (Тег)',
-            name: 'Тег ',
+            name: '', // Добавил название для удобства
             description: 'Покажи всем свой статус. Идет перед ником.',
             tag: '',
-            tagColor: '#ff55ff',
+            tagColor: '#00AAAA', // Морской синий цвет для трезубца
             icon: '/Trident.png',
             price: '20 ₽'
         },
         {
             id: 14,
             category: 'Префикс (Тег)',
-            name: 'Тег ',
+            name: '',
             description: 'Покажи всем свой статус. Идет перед ником.',
             tag: '',
-            tagColor: '#ff55ff',
+            tagColor: '#55FF55', // Золотой/шахтерский цвет для кирки
             icon: '/Picaxe.png',
-            price: '20 ₽'
-        },
-        {
-            id: 15,
-            category: 'Префикс (Тег)',
-            name: 'Тег ',
-            description: 'Покажи всем свой статус. Идет перед ником.',
-            tag: '',
-            tagColor: '#ff55ff',
-            icon: '/Shield.png',
             price: '20 ₽'
         },
         {
             id: 16,
             category: 'Префикс (Тег)',
-            name: 'Тег ',
+            name: '',
             description: 'Покажи всем свой статус. Идет перед ником.',
             tag: '',
-            tagColor: '#ff55ff',
+            tagColor: '#FFAA00', // Зеленый цвет рейнджера
             icon: '/Bow.png',
             price: '20 ₽'
         },
         {
             id: 17,
             category: 'Префикс (Тег)',
-            name: 'Тег ',
+            name: '',
             description: 'Покажи всем свой статус. Идет перед ником.',
             tag: '',
-            tagColor: '#ff55ff',
+            tagColor: '#FF55FF', // А для зелья можно даже вставить градиент!
             icon: '/Botle.png',
             price: '20 ₽'
         },
         {
             id: 18,
             category: 'Префикс (Тег)',
-            name: 'Тег ',
+            name: '',
             description: 'Покажи всем свой статус. Идет перед ником.',
             tag: '',
-            tagColor: '#ff55ff',
+            tagColor: '#AA0000', // Ярко-красный для сердца
             icon: '/Heart.png',
-            price: '20 ₽'
-        },
-        {
-            id: 19,
-            category: 'Префикс (Тег)',
-            name: 'Тег ',
-            description: 'Покажи всем свой статус. Идет перед ником.',
-            tag: '',
-            tagColor: '#ff55ff',
-            icon: '/Star.png',
             price: '20 ₽'
         },
         {
             id: 20,
             category: 'Префикс (Тег)',
-            name: 'Тег ',
+            name: '',
             description: 'Покажи всем свой статус. Идет перед ником.',
             tag: '',
-            tagColor: '#ff55ff',
-            icon: '/Lighting.png',
+            tagColor: '#FFFF55', // Розовый для кристалла
+            icon: '/Star.png',
             price: '20 ₽'
         },
+        {
+            id: 21,
+            category: 'Префикс (Тег)',
+            name: '',  
+            description: 'Покажи всем свой статус. Идет перед ником.',
+            tag: '',
+            tagColor: '#FFAA00', // Фиолетовый для короны
+            icon: '/Fire.png',
+            price: '20 ₽'
+        },
+        {
+            id: 22,
+            category: 'Префикс (Тег)',
+            name: '',  
+            description: 'Покажи всем свой статус. Идет перед ником.',
+            tag: '',
+            tagColor: '#FF5555', // Фиолетовый для короны
+            icon: '/Axe.png',
+            price: '20 ₽'
+        },
+        {
+            id: 23,
+            category: 'Префикс (Тег)',
+            name: '',  
+            description: 'Покажи всем свой статус. Идет перед ником.',
+            tag: '',
+            tagColor: '#55FFFF', // Фиолетовый для короны
+            icon: '/Sword.png',
+            price: '20 ₽'
+        }
         
     ];
 
@@ -203,7 +213,12 @@ const Store = () => {
         if (item.category === 'Префикс (Тег)') {
             setPreviewTag(item.tag);
             setPreviewIcon(item.icon || null);
-            message.success(`Тег ${item.tag} применен!`);
+            
+            // ДОБАВИЛИ ЭТО: Применяем встроенный цвет или градиент тега
+            setTagColor(item.tagColor || '#fff');
+            setTagGradient(item.gradient || null); 
+            
+            message.success(`Тег применен!`);
         } else if (item.category === 'Градиент') {
             if (target === 'tag') {
                 setTagGradient(item.gradient);
@@ -451,9 +466,9 @@ const Store = () => {
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px' }}>{item.category}</div>
                                     <div style={{ fontSize: '16px', color: '#fff', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {/* Если у товара есть иконка — показываем её рядом с названием */}
+                                        {/* Исправили передачу цвета: теперь ищет и tagColor, и color */}
                                         {item.icon && (
-                                            <div style={getIconStyle(item.icon, item.color, item.gradient)} />
+                                            <div style={getIconStyle(item.icon, item.tagColor || item.color, item.gradient)} />
                                         )}
                                         
                                         <span style={item.gradient ? { 
@@ -462,7 +477,7 @@ const Store = () => {
                                             backgroundClip: 'text',
                                             WebkitTextFillColor: 'transparent',
                                             color: 'transparent'
-                                        } : { color: item.color }}>
+                                        } : { color: item.tagColor || item.color || '#fff' }}>
                                             {item.name}
                                         </span>
                                     </div>
