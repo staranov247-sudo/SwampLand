@@ -8,6 +8,8 @@ const fs = require('fs'); // Для работы с файловой систе�
 
 const sequelize = require('./config/db');
 const Season = require('./models/Season');
+const User = require('./models/User');
+const VerificationCode = require('./models/VerificationCode');
 
 const app = express();
 app.use(cors());
@@ -39,6 +41,190 @@ app.use(express.json());
 
 // ДЕЛАЕМ ПАПКУ UPLOADS ПУБЛИЧНОЙ (чтобы React мог по ссылке брать картинки)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// --- АВТОРИЗАЦИЯ И ПОДТВЕРЖДЕНИЕ MINECRAFT ---
+
+// Вход через Discord (редирект)
+app.get('/api/auth/discord/login', (req, res) => {
+    const client_id = process.env.DISCORD_CLIENT_ID;
+    const redirect_uri = process.env.DISCORD_REDIRECT_URI;
+    if (!client_id || !redirect_uri) {
+        return res.status(400).send('Discord OAuth credentials not configured in .env. Please set DISCORD_CLIENT_ID and DISCORD_REDIRECT_URI.');
+    }
+    const url = `https://discord.com/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(redirect_uri)}&response_type=code&scope=identify`;
+    res.redirect(url);
+});
+
+// Обработка OAuth2 Callback от Discord
+app.get('/api/auth/discord/callback', async (req, res) => {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ error: 'No code provided' });
+    try {
+        const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
+            client_id: process.env.DISCORD_CLIENT_ID,
+            client_secret: process.env.DISCORD_CLIENT_SECRET,
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: process.env.DISCORD_REDIRECT_URI,
+        }), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        
+        const accessToken = tokenResponse.data.access_token;
+        const userResponse = await axios.get('https://discord.com/api/users/@me', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        
+        const discordUser = userResponse.data;
+        // Найти или создать пользователя
+        let [user, created] = await User.findOrCreate({
+            where: { discordId: discordUser.id },
+            defaults: {
+                username: discordUser.username,
+                avatar: discordUser.avatar,
+                minecraftVerified: false
+            }
+        });
+        
+        if (!created) {
+            user.username = discordUser.username;
+            user.avatar = discordUser.avatar;
+            await user.save();
+        }
+        
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        res.redirect(`${frontendUrl}/?auth_success=true&id=${user.id}&username=${encodeURIComponent(user.username)}&avatar=${user.avatar || ''}&minecraftNickname=${encodeURIComponent(user.minecraftNickname || '')}&minecraftVerified=${user.minecraftVerified}`);
+    } catch (error) {
+        console.error('Error during Discord OAuth:', error.response?.data || error.message);
+        res.status(500).send('Authentication failed');
+    }
+});
+
+// Тестовый быстрый вход для локальной разработки (Mock Login)
+app.post('/api/auth/mock-login', async (req, res) => {
+    try {
+        const mockDiscordId = '123456789012345678';
+        let [user, created] = await User.findOrCreate({
+            where: { discordId: mockDiscordId },
+            defaults: {
+                username: 'TestSteve_DS',
+                avatar: null,
+                minecraftVerified: false
+            }
+        });
+        res.json({
+            id: user.id,
+            discordId: user.discordId,
+            username: user.username,
+            avatar: user.avatar,
+            minecraftNickname: user.minecraftNickname,
+            minecraftVerified: user.minecraftVerified
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Mock login failed' });
+    }
+});
+
+// Генерация кода для игрока на сервере Minecraft
+app.post('/api/minecraft/generate-code', async (req, res) => {
+    const { nickname } = req.body;
+    if (!nickname) {
+        return res.status(400).json({ error: 'Nickname is required' });
+    }
+    
+    try {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 минут
+        
+        await VerificationCode.destroy({ where: { minecraftNickname: nickname } });
+        
+        await VerificationCode.create({
+            code,
+            minecraftNickname: nickname,
+            expiresAt
+        });
+        
+        res.status(201).json({ code, nickname });
+    } catch (error) {
+        console.error('Error generating verification code:', error);
+        res.status(500).json({ error: 'Failed to generate code' });
+    }
+});
+
+// Привязка никнейма на сайте с помощью кода
+app.post('/api/auth/link-minecraft', async (req, res) => {
+    const { userId, code } = req.body;
+    if (!userId || !code) {
+        return res.status(400).json({ error: 'userId and code are required' });
+    }
+    
+    try {
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const verification = await VerificationCode.findOne({
+            where: { code }
+        });
+        
+        if (!verification) {
+            return res.status(400).json({ error: 'Неверный код подтверждения' });
+        }
+        
+        if (new Date() > new Date(verification.expiresAt)) {
+            await verification.destroy();
+            return res.status(400).json({ error: 'Код подтверждения истек. Получите новый код в игре' });
+        }
+        
+        user.minecraftNickname = verification.minecraftNickname;
+        user.minecraftVerified = true;
+        await user.save();
+        
+        await verification.destroy();
+        
+        res.json({
+            id: user.id,
+            discordId: user.discordId,
+            username: user.username,
+            avatar: user.avatar,
+            minecraftNickname: user.minecraftNickname,
+            minecraftVerified: user.minecraftVerified
+        });
+    } catch (error) {
+        console.error('Error linking Minecraft account:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Отвязка никнейма на сайте
+app.post('/api/auth/unlink-minecraft', async (req, res) => {
+    const { userId } = req.body;
+    if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+    }
+    try {
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        user.minecraftNickname = null;
+        user.minecraftVerified = false;
+        await user.save();
+        res.json({
+            id: user.id,
+            discordId: user.discordId,
+            username: user.username,
+            avatar: user.avatar,
+            minecraftNickname: user.minecraftNickname,
+            minecraftVerified: user.minecraftVerified
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 
 // --- МАРШРУТЫ ДЛЯ СЕЗОНОВ ---

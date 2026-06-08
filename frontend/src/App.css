@@ -337,3 +337,10 @@ body.page-seasons::after {
  body.page-store::after {
     display: none !important;
 }
+
+/* --- СТИЛИ ДЛЯ ЛИЧНОГО КАБИНЕТА --- */
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

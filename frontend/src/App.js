@@ -1,15 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, NavLink } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import Rules from './pages/Rules';
 import Seasons from './pages/Seasons';
-import Store from './pages/Store'; // <--- Добавь эту строчку
-import Commands from './pages/Commands'; // <--- И эту строчку
+import Store from './pages/Store';
+import Commands from './pages/Commands';
+import Profile from './pages/Profile';
 import './App.css';
 
 function App() {
+    const [user, setUser] = useState(null);
+
+    // При загрузке проверяем сохраненного пользователя и проверяем параметры URL для авторизации
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('auth_success') === 'true') {
+            const loggedUser = {
+                id: parseInt(params.get('id'), 10),
+                discordId: params.get('id'), // ID пользователя
+                username: params.get('username'),
+                avatar: params.get('avatar'),
+                minecraftNickname: params.get('minecraftNickname') !== 'null' ? params.get('minecraftNickname') : null,
+                minecraftVerified: params.get('minecraftVerified') === 'true'
+            };
+            setUser(loggedUser);
+            localStorage.setItem('user', JSON.stringify(loggedUser));
+            
+            // Очищаем адресную строку от параметров OAuth2
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
+
+    const handleLogout = () => {
+        setUser(null);
+        localStorage.removeItem('user');
+    };
+
     return (
         <ConfigProvider
             theme={{
@@ -73,16 +106,51 @@ function App() {
                         <NavLink to="/store" className="nav-link">Магазин</NavLink>
                     </div>
 
-                    {/* 3. Правая часть (Только Discord) */}
+                    {/* 3. Правая часть (Логин / Кабинет) */}
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '20px' }}>
+                        {user ? (
+                            <NavLink 
+                                to="/profile" 
+                                className="nav-link" 
+                                style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '10px',
+                                    border: '1px solid rgba(32, 201, 151, 0.3)',
+                                    padding: '5px 12px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(32, 201, 151, 0.05)'
+                                }}
+                            >
+                                <img 
+                                    src={user.avatar 
+                                        ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` 
+                                        : 'https://cdn.discordapp.com/embed/avatars/0.png'} 
+                                    alt="Avatar" 
+                                    style={{ width: '22px', height: '22px', borderRadius: '50%' }} 
+                                />
+                                <span style={{ fontSize: '10px' }}>{user.username}</span>
+                            </NavLink>
+                        ) : (
+                            <NavLink 
+                                to="/profile" 
+                                className="discord-login-btn"
+                            >
+                                <img src="/Discord.png" alt="Discord" />
+                                <span>Войти</span>
+                            </NavLink>
+                        )}
+                        
+                        {/* Небольшая ссылка на сам Дискорд сервер */}
                         <a 
                             href="https://discord.gg/FSCHewrPyv" 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="discord-login-btn"
+                            style={{ opacity: 0.6, display: 'flex', alignItems: 'center' }}
+                            onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                            onMouseOut={(e) => e.currentTarget.style.opacity = 0.6}
                         >
-                            <img src="/Discord.png" alt="Discord" />
-                            <span>Discord</span>
+                            <img src="/Discord.png" alt="Discord Server" style={{ width: '18px', height: '18px' }} />
                         </a>
                     </div>
 
@@ -92,12 +160,11 @@ function App() {
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/admin" element={<Admin />} />
-                    
-                    {/* Пустышки для новых страниц, чтобы не было ошибок при клике */}
                     <Route path="/seasons" element={<Seasons />} />
                     <Route path="/rules" element={<Rules />} />
                     <Route path="/store" element={<Store />} />
                     <Route path="/commands" element={<Commands />} />
+                    <Route path="/profile" element={<Profile user={user} setUser={setUser} onLogout={handleLogout} />} />
                 </Routes>
             </Router>
         </ConfigProvider>
