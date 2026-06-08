@@ -24,7 +24,7 @@ function App() {
         if (params.get('auth_success') === 'true') {
             const loggedUser = {
                 id: parseInt(params.get('id'), 10),
-                discordId: params.get('id'), // ID пользователя
+                discordId: params.get('discordId') || params.get('id'), // ID пользователя
                 username: params.get('username'),
                 avatar: params.get('avatar'),
                 minecraftNickname: params.get('minecraftNickname') !== 'null' ? params.get('minecraftNickname') : null,

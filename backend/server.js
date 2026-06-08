@@ -93,7 +93,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         }
         
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        res.redirect(`${frontendUrl}/?auth_success=true&id=${user.id}&username=${encodeURIComponent(user.username)}&avatar=${user.avatar || ''}&minecraftNickname=${encodeURIComponent(user.minecraftNickname || '')}&minecraftVerified=${user.minecraftVerified}`);
+        res.redirect(`${frontendUrl}/?auth_success=true&id=${user.id}&discordId=${user.discordId}&username=${encodeURIComponent(user.username)}&avatar=${user.avatar || ''}&minecraftNickname=${encodeURIComponent(user.minecraftNickname || '')}&minecraftVerified=${user.minecraftVerified}`);
     } catch (error) {
         console.error('Error during Discord OAuth:', error.response?.data || error.message);
         res.status(500).send('Authentication failed');
