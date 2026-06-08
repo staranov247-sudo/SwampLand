@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Input, Button, Typography, message, Space } from 'antd';
-import { DiscordOutlined, LinkOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Typography, message, Space, Spin } from 'antd';
+import { DiscordOutlined, LinkOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const { Title, Text } = Typography;
@@ -11,12 +11,38 @@ const Profile = ({ user, setUser, onLogout }) => {
     const [mockNickname, setMockNickname] = useState('Steve'); // Для быстрой симуляции
     const [simulatedCode, setSimulatedCode] = useState('');
 
+    // Состояния для истории покупок
+    const [purchases, setPurchases] = useState([]);
+    const [purchasesLoading, setPurchasesLoading] = useState(false);
+
+    // Добавление класса страницы на body
     useEffect(() => {
         document.body.classList.add('page-profile');
         return () => {
             document.body.classList.remove('page-profile');
         };
     }, []);
+
+    // Функция загрузки покупок пользователя
+    const loadPurchases = async () => {
+        if (!user) return;
+        setPurchasesLoading(true);
+        try {
+            const response = await axios.get(`http://localhost:5000/api/users/${user.id}/purchases`);
+            setPurchases(response.data);
+        } catch (error) {
+            console.error("Не удалось загрузить историю покупок:", error);
+        } finally {
+            setPurchasesLoading(false);
+        }
+    };
+
+    // Загружаем покупки при смене пользователя
+    useEffect(() => {
+        if (user) {
+            loadPurchases();
+        }
+    }, [user]);
 
     const handleLink = async () => {
         if (!code || code.length !== 6) {
@@ -327,6 +353,56 @@ const Profile = ({ user, setUser, onLogout }) => {
                 </Card>
 
             </div>
+
+            {/* Раздел: История покупок */}
+            <Card 
+                className="mc-card" 
+                style={{ marginTop: '30px' }} 
+                title={<span><SafetyCertificateOutlined style={{ marginRight: '8px' }} />История покупок</span>}
+            >
+                {purchasesLoading ? (
+                    <div style={{ textAlign: 'center', padding: '30px' }}><Spin /></div>
+                ) : purchases.length === 0 ? (
+                    <div style={{ color: '#666', fontSize: '10px', textAlign: 'center', padding: '20px 0' }}>
+                        Вы пока не совершали покупок. Загляните в наш <a href="/store" style={{ color: '#20c997', textDecoration: 'underline' }}>Магазин</a>!
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '10px' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Товар</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Категория</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Ник в игре</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Цена</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Дата</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {purchases.map(p => {
+                                    const dateStr = new Date(p.createdAt).toLocaleDateString('ru-RU', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    });
+                                    return (
+                                        <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                                            <td style={{ padding: '12px 10px', color: '#fff', fontWeight: 'bold' }}>{p.itemName}</td>
+                                            <td style={{ padding: '12px 10px', color: '#ccc' }}>{p.target}</td>
+                                            <td style={{ padding: '12px 10px', color: '#ffd700' }}>{p.minecraftNickname}</td>
+                                            <td style={{ padding: '12px 10px', color: '#20c997', fontWeight: 'bold' }}>{p.price}</td>
+                                            <td style={{ padding: '12px 10px', color: '#555' }}>{dateStr}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
         </div>
     );
 };

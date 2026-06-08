@@ -274,16 +274,20 @@ const Store = ({ user }) => {
                     itemName: item.name,
                     price: item.price,
                     nickname: nickname,
-                    target: item.category // Передаем категорию (Цвет, Градиент, Тег)
+                    target: item.category, // Передаем категорию (Цвет, Градиент, Тег)
+                    userId: user ? user.id : null
                 })
             });
 
             const data = await response.json();
             hideLoading();
 
-            if (data.success && data.paymentUrl) {
-                // Если всё ок — перенаправляем игрока на страницу оплаты DonatePay
-                window.location.href = data.paymentUrl;
+            if (data.success) {
+                if (data.mockPayment) {
+                    message.success('Оплата успешно имитирована (дев-режим)! Товар добавлен в историю покупок.');
+                } else if (data.paymentUrl) {
+                    window.location.href = data.paymentUrl;
+                }
             } else {
                 message.error(data.message || 'Произошла ошибка при создании платежа');
             }
