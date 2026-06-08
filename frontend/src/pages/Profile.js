@@ -83,6 +83,42 @@ const Profile = ({ user, setUser, onLogout }) => {
         }
     };
 
+    // Экипировка купленного стиля
+    const handleEquip = async (purchaseId) => {
+        setLoading(true);
+        try {
+            const response = await axios.post('http://localhost:5000/api/users/equip', {
+                userId: user.id,
+                purchaseId
+            });
+            setUser(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+            message.success('Стиль успешно экипирован в игре! 👕');
+        } catch (error) {
+            message.error(error.response?.data?.error || 'Не удалось экипировать стиль');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Снятие активного стиля
+    const handleUnequip = async (type) => {
+        setLoading(true);
+        try {
+            const response = await axios.post('http://localhost:5000/api/users/unequip', {
+                userId: user.id,
+                type
+            });
+            setUser(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+            message.success('Стиль успешно снят');
+        } catch (error) {
+            message.error('Не удалось снять стиль');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Функция для симуляции отправки кода с сервера Майнкрафта
     const handleSimulateMinecraftCommand = async () => {
         if (!mockNickname) {
@@ -201,6 +237,32 @@ const Profile = ({ user, setUser, onLogout }) => {
 
                     <Title level={3} style={{ fontSize: '14px', marginBottom: '5px' }}>{user.username}</Title>
                     <Text type="secondary" style={{ fontSize: '10px', color: '#888' }}>ID: {user.discordId}</Text>
+
+                    {/* Отображение надетой экипировки в профиле */}
+                    {(user.activePrefix || user.activeGradient) && (
+                        <div style={{ 
+                            marginTop: '20px', 
+                            background: 'rgba(0, 0, 0, 0.4)', 
+                            padding: '12px', 
+                            borderRadius: '8px', 
+                            border: '1px solid rgba(32, 201, 151, 0.2)',
+                            textAlign: 'left'
+                        }}>
+                            <div style={{ color: '#20c997', fontSize: '8px', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                                Экипировано в игре 👕
+                            </div>
+                            {user.activePrefix && (
+                                <div style={{ fontSize: '9px', color: '#ccc', marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Тег:</span> <span style={{ color: '#ffd700' }}>{user.activePrefix}</span>
+                                </div>
+                            )}
+                            {user.activeGradient && (
+                                <div style={{ fontSize: '9px', color: '#ccc', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Ник:</span> <span style={{ color: '#ffd700' }}>{user.activeGradient}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div style={{ marginTop: '30px' }}>
                         <Button 
@@ -354,11 +416,11 @@ const Profile = ({ user, setUser, onLogout }) => {
 
             </div>
 
-            {/* Раздел: История покупок */}
+            {/* Раздел: История покупок и Гардероб */}
             <Card 
                 className="mc-card" 
                 style={{ marginTop: '30px' }} 
-                title={<span><SafetyCertificateOutlined style={{ marginRight: '8px' }} />История покупок</span>}
+                title={<span><SafetyCertificateOutlined style={{ marginRight: '8px' }} />Мой Гардероб и покупки</span>}
             >
                 {purchasesLoading ? (
                     <div style={{ textAlign: 'center', padding: '30px' }}><Spin /></div>
@@ -376,6 +438,7 @@ const Profile = ({ user, setUser, onLogout }) => {
                                     <th style={{ padding: '12px 10px', color: '#888' }}>Ник в игре</th>
                                     <th style={{ padding: '12px 10px', color: '#888' }}>Цена</th>
                                     <th style={{ padding: '12px 10px', color: '#888' }}>Дата</th>
+                                    <th style={{ padding: '12px 10px', color: '#888', textAlign: 'center' }}>Экипировка</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -387,6 +450,12 @@ const Profile = ({ user, setUser, onLogout }) => {
                                         hour: '2-digit',
                                         minute: '2-digit'
                                     });
+
+                                    // Проверяем, надет ли этот конкретный товар
+                                    const isEquipped = p.target === 'Градиент'
+                                        ? user.activeGradient === p.itemName
+                                        : user.activePrefix === p.itemName;
+
                                     return (
                                         <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
                                             <td style={{ padding: '12px 10px', color: '#fff', fontWeight: 'bold' }}>{p.itemName}</td>
@@ -394,6 +463,40 @@ const Profile = ({ user, setUser, onLogout }) => {
                                             <td style={{ padding: '12px 10px', color: '#ffd700' }}>{p.minecraftNickname}</td>
                                             <td style={{ padding: '12px 10px', color: '#20c997', fontWeight: 'bold' }}>{p.price}</td>
                                             <td style={{ padding: '12px 10px', color: '#555' }}>{dateStr}</td>
+                                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                                {isEquipped ? (
+                                                    <Button 
+                                                        type="primary" 
+                                                        size="small" 
+                                                        loading={loading}
+                                                        onClick={() => handleUnequip(p.target === 'Градиент' ? 'gradient' : 'prefix')}
+                                                        style={{ 
+                                                            background: 'rgba(32, 201, 151, 0.15)', 
+                                                            border: '1px solid #20c997', 
+                                                            color: '#20c997',
+                                                            fontSize: '9px',
+                                                            height: '28px'
+                                                        }}
+                                                    >
+                                                        Снять 👕
+                                                    </Button>
+                                                ) : (
+                                                    <Button 
+                                                        size="small" 
+                                                        loading={loading}
+                                                        onClick={() => handleEquip(p.id)}
+                                                        style={{ 
+                                                            background: 'rgba(255, 255, 255, 0.05)', 
+                                                            border: '1px solid rgba(255,255,255,0.1)', 
+                                                            color: '#fff',
+                                                            fontSize: '9px',
+                                                            height: '28px'
+                                                        }}
+                                                    >
+                                                        Надеть
+                                                    </Button>
+                                                )}
+                                            </td>
                                         </tr>
                                     );
                                 })}
