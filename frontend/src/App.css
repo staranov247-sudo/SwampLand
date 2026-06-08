@@ -1,0 +1,339 @@
+/* =========================================
+   1. ГЛОБАЛЬНЫЕ СТИЛИ, БОЛОТНЫЙ ФОН И ЧЕЛОВЕЧЕК
+========================================= */
+body {
+    background-color: #0a0a0c !important;
+    
+    /* Добавляем два статических фона: 1. Тонкая сетка, 2. Основной градиент свечения */
+    background-image: 
+        radial-gradient(#1c1c1e 1px, transparent 1px), /* Static Grid */
+        radial-gradient(circle at 50% 35%, #1c1c1e 0%, #0a0a0c 100%) !important; /* Static Gradient */
+    background-size: 
+        30px 30px, 
+        100% 100%;
+    background-position: center, center !important;
+    background-attachment: fixed !important;
+
+    color: #e0e0e0 !important;
+    margin: 0;
+    font-family: 'Press Start 2P', cursive !important;
+    font-size: 12px;
+    
+    /* Обязательно, чтобы анимация спор (::before) и человечек (::after) работали правильно */
+    position: relative;
+    z-index: 0;
+}
+
+/* --- СЛОЙ 1 (СЗАДИ КОНТЕНТА): ЭФФЕКТ ДРЕЙФУЮЩИХ БОЛОТНЫХ СПОР (::before) --- */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -1; /* Над сеткой фона (0), но под контентом */
+    opacity: 0.15; /* Делаем их едва заметными */
+    pointer-events: none; /* Мышка проходит сквозь них */
+    
+    /* Три слоя спор разных размеров для объема */
+    background-image: 
+        radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3) 0%, rgba(84, 90, 88, 0.1) 40%, transparent 60%),
+        radial-gradient(ellipse at center, rgba(200, 211, 209, 0.2) 0%, transparent 50%),
+        radial-gradient(ellipse at center, rgba(113, 126, 122, 0.2) 0%, transparent 50%);
+    
+    /* Разные размеры ячеек для каждого слоя спор */
+    background-size: 
+        200px 200px, 
+        300px 300px, 
+        150px 150px;
+        
+    /* Начальное смещение */
+    background-position: 0 0, 10px 10px, -10px -10px;
+    
+    /* Анимация дрейфа */
+    animation: driftSpores 180s linear infinite;
+}
+
+/* АНИМАЦИЯ: Медленный дрейф спор снизу вверх и в сторону */
+@keyframes driftSpores {
+    0% { background-position: 0% 100%, 10px 110%, -10px 90%; }
+    100% { background-position: 100% 0%, 110px -10px, 90px 10px; }
+}
+
+/* --- СЛОЙ 2 (ПОВЕРХ ВСЕГО): ВОЗВРАЩАЕМ ЧЕЛОВЕЧКА (::after) --- */
+/* (Мы убрали 'content: none !important' и вернули настройки персонажа) */
+body::after {
+    /* --- Обязательные настройки --- */
+    content: ""; /* Обязательное свойство, иначе элемент не появится */
+    display: block; /* Позволяет задать размеры */
+    z-index: 10000; /* Гарантирует, что персонаж будет ПОВЕРХ спор и контента */
+
+    /* --- Фиксированное позиционирование --- */
+    position: fixed; /* Прикрепляет персонажа к окну браузера */
+    bottom: -12px; /* Отступ от нижнего края */
+    right: 20px; /* Отступ от правого края */
+
+    /* --- Размеры контейнера --- */
+    height: 70vh; /* Относительный размер: 30% от высоты окна браузера */
+    max-height: 800px; /* Ограничиваем максимальную высоту в пикселях */
+    width: 750px; /* Ширина контейнера (на основе пропорций стандартного скина) */
+
+    /* --- Настройка изображения --- */
+    /* Убедись, что файл image_11.png лежит в папке 'frontend/src/' */
+    background-image: url('./custom.png'); 
+    background-size: contain; /* Изменяет размер, чтобы вписать целиком */
+    background-repeat: no-repeat; /* Не повторяем */
+    background-position: bottom right; /* Выравниваем внутри контейнера */
+
+    /* --- Стили для интеграции --- */
+    image-rendering: pixelated; /* Четкость пикселей */
+    pointer-events: none; /* Мышка проходит сквозь него */
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5)); /* Мягкая тень */
+}
+
+/* --- 2. ЖЕСТКИЙ СБРОС ДЛЯ ВСЕХ ЭЛЕМЕНТОВ --- */
+* {
+    font-family: 'Press Start 2P', cursive !important;
+    font-weight: normal !important;
+}
+
+/* Заголовки с мягкими аккуратными тенями */
+h1, h2, h3, h4, h5, h6, 
+.ant-typography, 
+.ant-statistic-title, 
+.ant-card-head-title {
+    font-family: 'Press Start 2P', cursive !important;
+    color: #ffffff !important;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+/* --- 3. СТЕКЛЯННЫЕ КАРТОЧКИ (Glassmorphism) --- */
+.ant-card, .mc-card {
+    background: rgba(20, 20, 20, 0.4) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Эффект при наведении на карточку сервера */
+.mc-card:hover { 
+    border-color: rgba(0, 102, 255, 0.4) !important; 
+    box-shadow: 0 15px 30px rgba(0, 102, 255, 0.15) !important;
+    transform: translateY(-4px); 
+}
+
+.ant-statistic-content { color: #0066ff !important; font-size: 20px !important; }
+
+/* --- 4. НЕОНОВЫЕ И СТИЛЬНЫЕ КНОПКИ --- */
+.ant-btn {
+    font-family: 'Press Start 2P', cursive !important;
+    font-size: 11px !important;
+}
+
+.ant-btn-primary { 
+    background: linear-gradient(135deg, #0066ff 0%, #0044aa 100%) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3) !important;
+    color: white !important;
+    transition: all 0.2s ease;
+}
+
+.ant-btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(0, 102, 255, 0.5) !important;
+    transform: scale(1.02);
+}
+
+.ant-btn-dangerous {
+    background: rgba(255, 77, 79, 0.15) !important;
+    border: 1px solid rgba(255, 77, 79, 0.4) !important;
+    color: #ff4d4f !important;
+}
+
+/* --- 5. ФОРМЫ И ПОЛЯ ВВОДА (Инпуты) --- */
+.ant-input, .ant-select-selector {
+    background-color: rgba(10, 10, 10, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+}
+
+.ant-input:focus, .ant-select-selector:hover {
+    border-color: #0066ff !important;
+}
+
+.ant-select-dropdown {
+    background-color: rgba(20, 20, 20, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* --- 6. ТАБЛИЦЫ --- */
+.ant-table { background: transparent !important; }
+.ant-table-thead > tr > th { 
+    background: rgba(15, 15, 15, 0.6) !important; 
+    color: #fff !important; 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.ant-table-tbody > tr > td { 
+    color: #e0e0e0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+/* --- 7. РЕДАКТОР ПОСТОВ (ReactQuill) --- */
+.ql-toolbar.ql-snow {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border-radius: 8px 8px 0 0;
+}
+.ql-container.ql-snow {
+    background-color: rgba(10, 10, 10, 0.6) !important;
+    border-radius: 0 0 8px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+}
+/* =========================================
+   АНИМАЦИИ ДЛЯ САЙТА
+========================================= */
+
+/* 1. Плавное появление снизу (Fade In Up) */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.anim-fade-in {
+    opacity: 0; /* Скрываем до начала анимации */
+    animation: fadeInUp 1s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+/* Задержки для поочередного появления */
+.delay-1 { animation-delay: 0.2s; }
+.delay-2 { animation-delay: 0.4s; }
+.delay-3 { animation-delay: 0.6s; }
+
+/* 2. Эффект левитации (Floating) */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+    100% { transform: translateY(0px); }
+}
+
+.anim-float {
+    animation: float 4s ease-in-out infinite;
+}
+
+/* 3. Пульсирующее свечение для кнопки (Pulse Glow) */
+@keyframes pulseGlow {
+    0% { box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1); }
+    50% { box-shadow: 0 4px 35px rgba(255, 255, 255, 0.4); }
+    100% { box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1); }
+}
+
+.anim-pulse {
+    animation: pulseGlow 3s infinite;
+}
+
+/* Если ты добавил человечка из прошлого шага (Вариант 1), 
+   можешь заставить левитировать и его! Просто добавь ему анимацию: */
+body::after {
+    /* Твои предыдущие стили для ::after... */
+    animation: float 6s ease-in-out infinite; /* Добавили плавный полет */
+}
+
+
+/* --- СТИЛИ ДЛЯ НАВИГАЦИИ (ШАПКА) --- */
+.nav-link {
+    color: #e0e0e0;
+    text-decoration: none;
+    font-size: 11px;
+    transition: color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    position: relative; /* Обязательно: чтобы линия "прилипла" к тексту */
+}
+
+/* Эффект при наведении мышки */
+.nav-link:hover {
+    color: #20c997 !important;
+    transform: translateY(-2px);
+}
+
+/* Активная (текущая) страница */
+.nav-link.active {
+    color: #20c997 !important;
+}
+
+/* --- СВЕТЯЩАЯСЯ ЛИНИЯ-ИНДИКАТОР --- */
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -10px; /* Отступ линии вниз от текста */
+    left: 0;
+    width: 100%;
+    height: 2px; /* Толщина полоски */
+    background-color: #20c997; /* Цвет полоски */
+    
+    /* Тот самый эффект неонового свечения (двойная тень для глубины) */
+    box-shadow: 0 0 8px #20c997, 0 0 16px rgba(32, 201, 151, 0.6); 
+    
+    /* Начальное состояние: невидима и сжата в центре */
+    opacity: 0;
+    transform: scaleX(0); 
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Когда вкладка активна — плавно растягиваем линию и включаем свечение */
+.nav-link.active::after {
+    opacity: 1;
+    transform: scaleX(1);
+}
+
+/* --- КНОПКА ЛОГИНА DISCORD --- */
+.discord-login-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #e0e0e0;
+    text-decoration: none;
+    font-size: 10px;
+    background: rgba(25, 25, 25, 0.6);
+    border: 1px solid rgba(88, 101, 242, 0.3); /* Легкий цвет Discord */
+    padding: 5px 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.discord-login-btn img {
+    width: 24px;
+    height: 24px; 
+}
+
+.discord-login-btn:hover {
+    background: rgba(88, 101, 242, 0.15); /* Подсветка фона */
+    border-color: #5865F2; /* Яркий цвет Discord */
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+}
+
+body.page-rules::after {
+    /* Указываем путь к новому файлу позы (вид со спины) */
+    background-image: url('./BG_Sait2.png') !important; /* !important, чтобы точно перекрыть */
+}
+
+body.page-seasons::after {
+    display: none !important;
+}
+/*
+ * Полностью скрываем статического персонажа (background) на странице Магазина
+ */
+ body.page-store::after {
+    display: none !important;
+}
