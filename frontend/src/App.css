@@ -348,3 +348,11 @@ body.page-seasons::after {
 body.page-profile::after {
     display: none !important;
 }
+
+.ant-input::placeholder {
+    color: rgba(255, 255, 255, 0.85) !important;
+    letter-spacing: normal !important;
+    font-family: 'Press Start 2P', cursive !important;
+    font-size: 10px !important;
+    opacity: 1 !important;
+}

@@ -265,7 +265,9 @@ const Profile = ({ user, setUser, onLogout }) => {
                                         textAlign: 'center', 
                                         fontSize: '18px', 
                                         letterSpacing: '10px',
-                                        fontFamily: 'monospace !important'
+                                        fontFamily: 'monospace',
+                                        color: '#ffffff',
+                                        backgroundColor: 'rgba(10, 10, 10, 0.7)'
                                     }}
                                 />
                                 
