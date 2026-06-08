@@ -344,3 +344,7 @@ body.page-seasons::after {
         grid-template-columns: 1fr !important;
     }
 }
+
+body.page-profile::after {
+    display: none !important;
+}

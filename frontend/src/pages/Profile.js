@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Input, Button, Typography, message, Space } from 'antd';
 import { DiscordOutlined, LinkOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -10,6 +10,13 @@ const Profile = ({ user, setUser, onLogout }) => {
     const [loading, setLoading] = useState(false);
     const [mockNickname, setMockNickname] = useState('Steve'); // Для быстрой симуляции
     const [simulatedCode, setSimulatedCode] = useState('');
+
+    useEffect(() => {
+        document.body.classList.add('page-profile');
+        return () => {
+            document.body.classList.remove('page-profile');
+        };
+    }, []);
 
     const handleLink = async () => {
         if (!code || code.length !== 6) {
