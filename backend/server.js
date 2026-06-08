@@ -10,6 +10,11 @@ const sequelize = require('./config/db');
 const Season = require('./models/Season');
 const User = require('./models/User');
 const VerificationCode = require('./models/VerificationCode');
+const Purchase = require('./models/Purchase');
+
+// Связи между таблицами
+User.hasMany(Purchase, { foreignKey: 'userId', as: 'purchases' });
+Purchase.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 const app = express();
 app.use(cors());
@@ -93,7 +98,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         }
         
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        res.redirect(`${frontendUrl}/?auth_success=true&id=${user.id}&discordId=${user.discordId}&username=${encodeURIComponent(user.username)}&avatar=${user.avatar || ''}&minecraftNickname=${encodeURIComponent(user.minecraftNickname || '')}&minecraftVerified=${user.minecraftVerified}`);
+        res.redirect(`${frontendUrl}/?auth_success=true&id=${user.id}&discordId=${user.discordId}&username=${encodeURIComponent(user.username)}&avatar=${user.avatar || ''}&minecraftNickname=${encodeURIComponent(user.minecraftNickname || '')}&minecraftVerified=${user.minecraftVerified}&activePrefix=${encodeURIComponent(user.activePrefix || '')}&activeGradient=${encodeURIComponent(user.activeGradient || '')}`);
     } catch (error) {
         console.error('Error during Discord OAuth:', error.response?.data || error.message);
         res.status(500).send('Authentication failed');
@@ -118,7 +123,9 @@ app.post('/api/auth/mock-login', async (req, res) => {
             username: user.username,
             avatar: user.avatar,
             minecraftNickname: user.minecraftNickname,
-            minecraftVerified: user.minecraftVerified
+            minecraftVerified: user.minecraftVerified,
+            activePrefix: user.activePrefix,
+            activeGradient: user.activeGradient
         });
     } catch (error) {
         console.error(error);
@@ -190,7 +197,9 @@ app.post('/api/auth/link-minecraft', async (req, res) => {
             username: user.username,
             avatar: user.avatar,
             minecraftNickname: user.minecraftNickname,
-            minecraftVerified: user.minecraftVerified
+            minecraftVerified: user.minecraftVerified,
+            activePrefix: user.activePrefix,
+            activeGradient: user.activeGradient
         });
     } catch (error) {
         console.error('Error linking Minecraft account:', error);
@@ -218,7 +227,9 @@ app.post('/api/auth/unlink-minecraft', async (req, res) => {
             username: user.username,
             avatar: user.avatar,
             minecraftNickname: user.minecraftNickname,
-            minecraftVerified: user.minecraftVerified
+            minecraftVerified: user.minecraftVerified,
+            activePrefix: user.activePrefix,
+            activeGradient: user.activeGradient
         });
     } catch (error) {
         console.error(error);
@@ -226,6 +237,196 @@ app.post('/api/auth/unlink-minecraft', async (req, res) => {
     }
 });
 
+// --- АДМИН-ПАНЕЛЬ: УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ И ПЛАТЕЖИ ---
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "KHJGBFodjfjolUDOFGODJfIUGfu7dobf23UFGIY";
+
+// Middleware проверки админа
+const isAdmin = (req, res, next) => {
+    const authHeader = req.headers['x-admin-password'];
+    if (authHeader !== ADMIN_PASSWORD) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+};
+
+// Админка: Получить всех зарегистрированных пользователей
+app.get('/api/admin/users', isAdmin, async (req, res) => {
+    try {
+        const users = await User.findAll({
+            order: [['id', 'DESC']]
+        });
+        res.json(users);
+    } catch (error) {
+        console.error('Ошибка получения пользователей в админке:', error);
+        res.status(500).json({ error: 'Не удалось загрузить пользователей' });
+    }
+});
+
+// Админка: Принудительно отвязать никнейм игрока
+app.post('/api/admin/users/:id/unlink', isAdmin, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        user.minecraftNickname = null;
+        user.minecraftVerified = false;
+        await user.save();
+        res.json(user);
+    } catch (error) {
+        console.error('Ошибка отвязки никнейма в админке:', error);
+        res.status(500).json({ error: 'Не удалось отвязать никнейм' });
+    }
+});
+
+// Пользователь: Получить историю своих покупок
+app.get('/api/users/:userId/purchases', async (req, res) => {
+    try {
+        const purchases = await Purchase.findAll({
+            where: { 
+                userId: req.params.userId,
+                status: 'COMPLETED'
+            },
+            order: [['id', 'DESC']]
+        });
+        res.json(purchases);
+    } catch (error) {
+        console.error('Ошибка загрузки истории покупок:', error);
+        res.status(500).json({ error: 'Не удалось загрузить историю покупок' });
+    }
+});
+
+// Пользователь: Надеть (экипировать) купленный товар
+app.post('/api/users/equip', async (req, res) => {
+    const { userId, purchaseId } = req.body;
+    if (!userId || !purchaseId) {
+        return res.status(400).json({ error: 'userId and purchaseId are required' });
+    }
+    
+    try {
+        const purchase = await Purchase.findByPk(purchaseId);
+        if (!purchase || purchase.userId !== userId || purchase.status !== 'COMPLETED') {
+            return res.status(403).json({ error: 'Покупка не найдена или не оплачена' });
+        }
+        
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        if (purchase.target === 'Градиент') {
+            user.activeGradient = purchase.itemName;
+        } else {
+            user.activePrefix = purchase.itemName;
+        }
+        await user.save();
+        
+        res.json({
+            id: user.id,
+            discordId: user.discordId,
+            username: user.username,
+            avatar: user.avatar,
+            minecraftNickname: user.minecraftNickname,
+            minecraftVerified: user.minecraftVerified,
+            activePrefix: user.activePrefix,
+            activeGradient: user.activeGradient
+        });
+    } catch (error) {
+        console.error('Ошибка экипировки товара:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+});
+
+// Пользователь: Снять (деэкипировать) активный товар
+app.post('/api/users/unequip', async (req, res) => {
+    const { userId, type } = req.body;
+    if (!userId || !type) {
+        return res.status(400).json({ error: 'userId and type are required' });
+    }
+    
+    try {
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        if (type === 'prefix') {
+            user.activePrefix = null;
+        } else if (type === 'gradient') {
+            user.activeGradient = null;
+        } else {
+            return res.status(400).json({ error: 'Неверный тип экипировки' });
+        }
+        await user.save();
+        
+        res.json({
+            id: user.id,
+            discordId: user.discordId,
+            username: user.username,
+            avatar: user.avatar,
+            minecraftNickname: user.minecraftNickname,
+            minecraftVerified: user.minecraftVerified,
+            activePrefix: user.activePrefix,
+            activeGradient: user.activeGradient
+        });
+    } catch (error) {
+        console.error('Ошибка снятия товара:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+});
+
+// Игровой сервер: Получить текущие надетее стили игрока по его никнейму
+app.get('/api/minecraft/player/:nickname/style', async (req, res) => {
+    try {
+        const user = await User.findOne({
+            where: {
+                minecraftNickname: req.params.nickname,
+                minecraftVerified: true
+            }
+        });
+        
+        if (!user) {
+            return res.json({
+                nickname: req.params.nickname,
+                activePrefix: null,
+                activeGradient: null
+            });
+        }
+        
+        res.json({
+            nickname: user.minecraftNickname,
+            activePrefix: user.activePrefix,
+            activeGradient: user.activeGradient
+        });
+    } catch (error) {
+        console.error('Ошибка получения стилей игрока в Minecraft:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+});
+
+// Универсальный вебхук для интеграции любого платежного агрегатора
+app.post('/api/payment/webhook', async (req, res) => {
+    const { purchaseId, status } = req.body;
+    try {
+        if (!purchaseId) {
+            return res.status(400).json({ error: 'purchaseId is required' });
+        }
+        
+        const purchase = await Purchase.findByPk(purchaseId);
+        if (!purchase) {
+            return res.status(404).json({ error: 'Запись платежа не найдена' });
+        }
+        
+        purchase.status = 'COMPLETED';
+        await purchase.save();
+        
+        res.json({ success: true, message: 'Оплата успешно подтверждена' });
+    } catch (error) {
+        console.error('Ошибка вебхука оплаты:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка обработчика платежа' });
+    }
+});
 
 // --- МАРШРУТЫ ДЛЯ СЕЗОНОВ ---
 
@@ -294,31 +495,46 @@ app.delete('/api/seasons/:id', async (req, res) => {
     }
 });
 
-// Маршрут для создания платежа DonatePay
+// Маршрут для создания платежа (универсальный, с поддержкой оффлайн дев-режима)
 app.post('/api/payment/create', async (req, res) => {
-    // Получаем данные от React
-    const { itemName, price, nickname, target } = req.body;
+    const { itemName, price, nickname, target, userId } = req.body;
     
-    // Убираем символ " ₽" из цены и переводим в чистое число
-    const numericPrice = parseInt(price.toString().replace(/\D/g, ''), 10);
-
     try {
-        // Отправляем запрос на сервера DonatePay
-        const response = await axios.post('https://donatepay.ru/api/v1/transactions', {
-            access_token: process.env.DONATEPAY_API_KEY, // Твой секретный ключ из .env
-            sum: numericPrice,
-            type: 'custom', 
-            comment: `Оплата: ${itemName} для игрока ${nickname} (цель: ${target})`
+        // Создаем запись транзакции в PENDING
+        // В дев-режиме (без ключа DonatePay) сразу делаем COMPLETED для удобства тестирования
+        const hasApiKey = !!process.env.DONATEPAY_API_KEY;
+        const status = hasApiKey ? 'PENDING' : 'COMPLETED';
+
+        const purchase = await Purchase.create({
+            userId: userId || null,
+            itemName,
+            price,
+            target,
+            status,
+            minecraftNickname: nickname
         });
 
-        if (response.data && response.data.status === 'success') {
-             res.json({ success: true, paymentUrl: response.data.data.url });
+        if (hasApiKey) {
+            const numericPrice = parseInt(price.toString().replace(/\D/g, ''), 10);
+            const response = await axios.post('https://donatepay.ru/api/v1/transactions', {
+                access_token: process.env.DONATEPAY_API_KEY,
+                sum: numericPrice,
+                type: 'custom', 
+                comment: `Оплата: ${itemName} для игрока ${nickname} (цель: ${target}, ID покупки: ${purchase.id})`
+            });
+
+            if (response.data && response.data.status === 'success') {
+                 return res.json({ success: true, paymentUrl: response.data.data.url });
+            } else {
+                 console.error('Ответ DonatePay:', response.data);
+                 return res.status(400).json({ success: false, message: 'Ошибка создания платежа в шлюзе' });
+            }
         } else {
-             console.error('Ответ DonatePay:', response.data);
-             res.status(400).json({ success: false, message: 'Ошибка создания платежа' });
+            // Симуляция мгновенной оплаты
+            return res.json({ success: true, mockPayment: true, purchase });
         }
     } catch (error) {
-        console.error('Ошибка при обращении к DonatePay:', error.message);
+        console.error('Ошибка при создании платежа:', error.message);
         res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера' });
     }
 });

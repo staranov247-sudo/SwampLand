@@ -7,7 +7,9 @@ const User = sequelize.define('User', {
     username: { type: DataTypes.STRING, allowNull: false },
     avatar: { type: DataTypes.STRING, allowNull: true },
     minecraftNickname: { type: DataTypes.STRING, allowNull: true },
-    minecraftVerified: { type: DataTypes.BOOLEAN, defaultValue: false }
+    minecraftVerified: { type: DataTypes.BOOLEAN, defaultValue: false },
+    activePrefix: { type: DataTypes.STRING, allowNull: true },
+    activeGradient: { type: DataTypes.STRING, allowNull: true }
 });
 
 module.exports = User;

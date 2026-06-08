@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Input, Button, Typography, message, Space } from 'antd';
+import { Card, Input, Button, Typography, message, Space, Spin } from 'antd';
 import { DiscordOutlined, LinkOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
@@ -11,6 +11,38 @@ const Profile = ({ user, setUser, onLogout }) => {
     const [mockNickname, setMockNickname] = useState('Steve'); // Для быстрой симуляции
     const [simulatedCode, setSimulatedCode] = useState('');
 
+    // Состояния для истории покупок
+    const [purchases, setPurchases] = useState([]);
+    const [purchasesLoading, setPurchasesLoading] = useState(false);
+
+    // Добавление класса страницы на body
+    useEffect(() => {
+        document.body.classList.add('page-profile');
+        return () => {
+            document.body.classList.remove('page-profile');
+        };
+    }, []);
+
+    // Функция загрузки покупок пользователя
+    const loadPurchases = async () => {
+        if (!user) return;
+        setPurchasesLoading(true);
+        try {
+            const response = await axios.get(`http://localhost:5000/api/users/${user.id}/purchases`);
+            setPurchases(response.data);
+        } catch (error) {
+            console.error("Не удалось загрузить историю покупок:", error);
+        } finally {
+            setPurchasesLoading(false);
+        }
+    };
+
+    // Загружаем покупки при смене пользователя
+    useEffect(() => {
+        if (user) {
+            loadPurchases();
+        }
+    }, [user]);
     const handleLink = async () => {
         if (!code || code.length !== 6) {
             message.warning('Код должен состоять из 6 цифр!');
@@ -50,6 +82,42 @@ const Profile = ({ user, setUser, onLogout }) => {
         }
     };
 
+    // Экипировка купленного стиля
+    const handleEquip = async (purchaseId) => {
+        setLoading(true);
+        try {
+            const response = await axios.post('http://localhost:5000/api/users/equip', {
+                userId: user.id,
+                purchaseId
+            });
+            setUser(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+            message.success('Стиль успешно экипирован в игре! 👕');
+        } catch (error) {
+            message.error(error.response?.data?.error || 'Не удалось экипировать стиль');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Снятие активного стиля
+    const handleUnequip = async (type) => {
+        setLoading(true);
+        try {
+            const response = await axios.post('http://localhost:5000/api/users/unequip', {
+                userId: user.id,
+                type
+            });
+            setUser(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+            message.success('Стиль успешно снят');
+        } catch (error) {
+            message.error('Не удалось снять стиль');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Функция для симуляции отправки кода с сервера Майнкрафта
     const handleSimulateMinecraftCommand = async () => {
         if (!mockNickname) {
@@ -77,13 +145,6 @@ const Profile = ({ user, setUser, onLogout }) => {
             message.error('Ошибка входа');
         }
     };
-
-    useEffect(() => {
-        document.body.classList.add('page-profile');
-        return () => {
-            document.body.classList.remove('page-profile');
-        };
-    }, []);
 
     if (!user) {
         return (
@@ -175,6 +236,32 @@ const Profile = ({ user, setUser, onLogout }) => {
 
                     <Title level={3} style={{ fontSize: '14px', marginBottom: '5px' }}>{user.username}</Title>
                     <Text type="secondary" style={{ fontSize: '10px', color: '#888' }}>ID: {user.discordId}</Text>
+
+                    {/* Отображение надетой экипировки в профиле */}
+                    {(user.activePrefix || user.activeGradient) && (
+                        <div style={{ 
+                            marginTop: '20px', 
+                            background: 'rgba(0, 0, 0, 0.4)', 
+                            padding: '12px', 
+                            borderRadius: '8px', 
+                            border: '1px solid rgba(32, 201, 151, 0.2)',
+                            textAlign: 'left'
+                        }}>
+                            <div style={{ color: '#20c997', fontSize: '8px', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                                Экипировано в игре 👕
+                            </div>
+                            {user.activePrefix && (
+                                <div style={{ fontSize: '9px', color: '#ccc', marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Тег:</span> <span style={{ color: '#ffd700' }}>{user.activePrefix}</span>
+                                </div>
+                            )}
+                            {user.activeGradient && (
+                                <div style={{ fontSize: '9px', color: '#ccc', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Ник:</span> <span style={{ color: '#ffd700' }}>{user.activeGradient}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div style={{ marginTop: '30px' }}>
                         <Button 
@@ -325,6 +412,97 @@ const Profile = ({ user, setUser, onLogout }) => {
                 </Card>
 
             </div>
+
+            {/* Раздел: История покупок и Гардероб */}
+            <Card 
+                className="mc-card" 
+                style={{ marginTop: '30px' }} 
+                title={<span><SafetyCertificateOutlined style={{ marginRight: '8px' }} />Мой Гардероб и покупки</span>}
+            >
+                {purchasesLoading ? (
+                    <div style={{ textAlign: 'center', padding: '30px' }}><Spin /></div>
+                ) : purchases.length === 0 ? (
+                    <div style={{ color: '#666', fontSize: '10px', textAlign: 'center', padding: '20px 0' }}>
+                        Вы пока не совершали покупок. Загляните в наш <a href="/store" style={{ color: '#20c997', textDecoration: 'underline' }}>Магазин</a>!
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '10px' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Товар</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Категория</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Ник в игре</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Цена</th>
+                                    <th style={{ padding: '12px 10px', color: '#888' }}>Дата</th>
+                                    <th style={{ padding: '12px 10px', color: '#888', textAlign: 'center' }}>Экипировка</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {purchases.map(p => {
+                                    const dateStr = new Date(p.createdAt).toLocaleDateString('ru-RU', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    });
+
+                                    // Проверяем, надет ли этот конкретный товар
+                                    const isEquipped = p.target === 'Градиент'
+                                        ? user.activeGradient === p.itemName
+                                        : user.activePrefix === p.itemName;
+
+                                    return (
+                                        <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                                            <td style={{ padding: '12px 10px', color: '#fff', fontWeight: 'bold' }}>{p.itemName}</td>
+                                            <td style={{ padding: '12px 10px', color: '#ccc' }}>{p.target}</td>
+                                            <td style={{ padding: '12px 10px', color: '#ffd700' }}>{p.minecraftNickname}</td>
+                                            <td style={{ padding: '12px 10px', color: '#20c997', fontWeight: 'bold' }}>{p.price}</td>
+                                            <td style={{ padding: '12px 10px', color: '#555' }}>{dateStr}</td>
+                                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                                {isEquipped ? (
+                                                    <Button 
+                                                        type="primary" 
+                                                        size="small" 
+                                                        loading={loading}
+                                                        onClick={() => handleUnequip(p.target === 'Градиент' ? 'gradient' : 'prefix')}
+                                                        style={{ 
+                                                            background: 'rgba(32, 201, 151, 0.15)', 
+                                                            border: '1px solid #20c997', 
+                                                            color: '#20c997',
+                                                            fontSize: '9px',
+                                                            height: '28px'
+                                                        }}
+                                                    >
+                                                        Снять 👕
+                                                    </Button>
+                                                ) : (
+                                                    <Button 
+                                                        size="small" 
+                                                        loading={loading}
+                                                        onClick={() => handleEquip(p.id)}
+                                                        style={{ 
+                                                            background: 'rgba(255, 255, 255, 0.05)', 
+                                                            border: '1px solid rgba(255,255,255,0.1)', 
+                                                            color: '#fff',
+                                                            fontSize: '9px',
+                                                            height: '28px'
+                                                        }}
+                                                    >
+                                                        Надеть
+                                                    </Button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
         </div>
     );
 };
