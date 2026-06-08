@@ -364,9 +364,11 @@ const Store = ({ user }) => {
                         placeholder="Введите ваш ник" 
                         value={nickname} 
                         onChange={(e) => setNickname(e.target.value)}
+                        readOnly={!!user?.minecraftVerified}
                         style={{ 
                             background: 'rgba(0,0,0,0.5)', border: '1px solid #444', 
-                            color: '#fff', fontFamily: 'inherit', marginBottom: '15px', padding: '10px' 
+                            color: '#fff', fontFamily: 'inherit', marginBottom: '15px', padding: '10px',
+                            cursor: user?.minecraftVerified ? 'not-allowed' : 'text'
                         }}
                     />
 
