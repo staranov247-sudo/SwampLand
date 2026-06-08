@@ -3,9 +3,20 @@ import { Typography, Input, message } from 'antd';
 
 const { Title } = Typography;
 
-const Store = () => {
+const Store = ({ user }) => {
     // Состояния для примерочной
-    const [nickname, setNickname] = useState('Steve');
+    const [nickname, setNickname] = useState(() => {
+        return user?.minecraftNickname || 'Steve';
+    });
+
+    // Синхронизируем никнейм при входе/выходе или изменении привязки
+    useEffect(() => {
+        if (user?.minecraftNickname) {
+            setNickname(user.minecraftNickname);
+        } else {
+            setNickname('Steve');
+        }
+    }, [user]);
     
     // Отдельно для НИКА
     const [nickColor, setNickColor] = useState('#fff'); 
@@ -355,9 +366,19 @@ const Store = () => {
                         onChange={(e) => setNickname(e.target.value)}
                         style={{ 
                             background: 'rgba(0,0,0,0.5)', border: '1px solid #444', 
-                            color: '#fff', fontFamily: 'inherit', marginBottom: '40px', padding: '10px' 
+                            color: '#fff', fontFamily: 'inherit', marginBottom: '15px', padding: '10px' 
                         }}
                     />
+
+                    {user?.minecraftVerified ? (
+                        <div style={{ color: '#20c997', fontSize: '8px', textAlign: 'center', marginBottom: '25px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                            Никнейм привязан к профилю ✅
+                        </div>
+                    ) : (
+                        <div style={{ color: '#888', fontSize: '8px', textAlign: 'center', marginBottom: '25px' }}>
+                            Войдите и подтвердите ник в профиле 🔒
+                        </div>
+                    )}
 
                     {/* Рендер персонажа и ника */}
                     <div style={{ position: 'relative', textAlign: 'center', height: '350px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>

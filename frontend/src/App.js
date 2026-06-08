@@ -162,7 +162,7 @@ function App() {
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/seasons" element={<Seasons />} />
                     <Route path="/rules" element={<Rules />} />
-                    <Route path="/store" element={<Store />} />
+                    <Route path="/store" element={<Store user={user} />} />
                     <Route path="/commands" element={<Commands />} />
                     <Route path="/profile" element={<Profile user={user} setUser={setUser} onLogout={handleLogout} />} />
                 </Routes>
