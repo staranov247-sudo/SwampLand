@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Input, Button, Typography, message, Space, Spin } from 'antd';
-import { DiscordOutlined, LinkOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { DiscordOutlined, LinkOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const { Title, Text } = Typography;
@@ -43,7 +43,6 @@ const Profile = ({ user, setUser, onLogout }) => {
             loadPurchases();
         }
     }, [user]);
-
     const handleLink = async () => {
         if (!code || code.length !== 6) {
             message.warning('Код должен состоять из 6 цифр!');
@@ -297,7 +296,7 @@ const Profile = ({ user, setUser, onLogout }) => {
                                 />
                             </div>
                             
-                            <Title level={3} style={{ color: '#20c997', fontSize: '16px', marginBottom: '5px' }}>
+                            <Title level={3} style={{ color: '#5865F2', fontSize: '16px', marginBottom: '5px' }}>
                                 Никнейм привязан ✅
                             </Title>
                             
@@ -353,9 +352,7 @@ const Profile = ({ user, setUser, onLogout }) => {
                                         textAlign: 'center', 
                                         fontSize: '18px', 
                                         letterSpacing: '10px',
-                                        fontFamily: 'monospace',
-                                        color: '#ffffff',
-                                        backgroundColor: 'rgba(10, 10, 10, 0.7)'
+                                        fontFamily: 'monospace !important'
                                     }}
                                 />
                                 

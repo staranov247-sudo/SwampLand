@@ -393,11 +393,11 @@ const Store = ({ user }) => {
 
                     {user?.minecraftVerified ? (
                         <div style={{ color: '#20c997', fontSize: '8px', textAlign: 'center', marginBottom: '25px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                            Никнейм привязан к профилю ✅
+                            Никнейм привязан к профилю
                         </div>
                     ) : (
                         <div style={{ color: '#888', fontSize: '8px', textAlign: 'center', marginBottom: '25px' }}>
-                            Войдите и подтвердите ник в профиле 🔒
+                            Войдите и подтвердите ник в профиле 
                         </div>
                     )}
 
